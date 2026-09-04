@@ -105,18 +105,21 @@ export class EmployeeApiStack extends cdk.Stack {
       `echo ECS_CLUSTER=${cluster.clusterName} >> /etc/ecs/ecs.config`,
       'systemctl enable --now amazon-ssm-agent || true'
     );
-    const autoScalingGroup = new autoscaling.AutoScalingGroup(this, 'EcsAutoScalingGroup', {
-      vpc,
-      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-      instanceType: new ec2.InstanceType(instanceType.valueAsString),
+    const launchTemplate = new ec2.LaunchTemplate(this, 'EcsLaunchTemplate', {
       machineImage,
-      minCapacity: 1,
-      maxCapacity: 1,
-      desiredCapacity: 1,
-      associatePublicIpAddress: true,
+      instanceType: new ec2.InstanceType(instanceType.valueAsString),
       role: instanceRole,
       securityGroup: instanceSecurityGroup,
       userData,
+      associatePublicIpAddress: true
+    });
+    const autoScalingGroup = new autoscaling.AutoScalingGroup(this, 'EcsAutoScalingGroup', {
+      vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+      launchTemplate,
+      minCapacity: 1,
+      maxCapacity: 1,
+      desiredCapacity: 1,
       healthCheck: autoscaling.HealthCheck.ec2()
     });
     const capacityProvider = new ecs.AsgCapacityProvider(this, 'AsgCapacityProvider', {
