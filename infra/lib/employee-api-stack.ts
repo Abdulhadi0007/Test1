@@ -54,12 +54,11 @@ export class EmployeeApiStack extends cdk.Stack {
       ]
     });
 
-    const repository = new ecr.Repository(this, 'Repository', {
-      repositoryName: 'employee-api',
-      imageScanOnPush: true,
-      lifecycleRules: [{ maxImageCount: 5 }],
-      removalPolicy: cdk.RemovalPolicy.RETAIN
-    });
+    const repository = ecr.Repository.fromRepositoryName(
+      this,
+      'Repository',
+      'employee-api'
+    );
 
     const cluster = new ecs.Cluster(this, 'Cluster', {
       vpc,
