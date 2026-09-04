@@ -1,0 +1,31 @@
+version: 0.2
+
+phases:
+
+  pre_build:
+    commands:
+      - echo Installing CDK infrastructure dependencies
+      - cd infra && npm ci
+      - cd ..
+      - echo Deploying infrastructure with zero tasks so ECR can receive the first image
+      - cd infra && npx cdk deploy --require-approval never --parameters DesiredCount=0
+      - cd ..
+      - echo Logging in to Amazon ECR from CodeBuild
+      - export ECR_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+
+  build:
+    commands:
+      - echo Building Spring Boot application
+      - ./mvnw clean package -DskipTests
+
+      - echo Building Docker image inside AWS CodeBuild
+      - docker build -t $ECR_URI:$IMAGE_TAG .
+
+  post_build:
+    commands:
+      - echo Pushing Docker image to ECR
+      - docker push $ECR_URI:$IMAGE_TAG
+      - echo Updating ECS service to use the new image
+      - aws ecs update-service --cluster employee-api-cluster --service employee-api-service --desired-count 1 --force-new-deployment --region $AWS_DEFAULT_REGION
+      - echo Build completed
