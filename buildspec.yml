@@ -1,3 +1,4 @@
+```yaml
 version: 0.2
 
 env:
@@ -13,42 +14,34 @@ phases:
       - echo "Checking Java version"
       - java -version
       - echo "Checking Maven version"
-      - ./mvnw -version
+      - bash ./mvnw -version
 
   pre_build:
     commands:
-      - export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-${AWS_REGION:-}}"; test -n "$AWS_DEFAULT_REGION" || { echo "AWS_DEFAULT_REGION is not configured"; exit 1; }
-      - export AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"; test -n "$AWS_ACCOUNT_ID" || { echo "Unable to determine AWS account ID"; exit 1; }
-
-      - export ECR_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME"
-
-      - echo "AWS region: $AWS_DEFAULT_REGION"
-      - echo "AWS account: $AWS_ACCOUNT_ID"
-      - echo "ECR URI: $ECR_URI"
-
+      - 'export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-${AWS_REGION:-}}"; test -n "$AWS_DEFAULT_REGION" || { echo "AWS_DEFAULT_REGION is not configured"; exit 1; }'
+      - 'export AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"; test -n "$AWS_ACCOUNT_ID" || { echo "Unable to determine AWS account ID"; exit 1; }'
+      - 'export ECR_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME"'
+      - 'echo "AWS region: $AWS_DEFAULT_REGION"'
+      - 'echo "AWS account: $AWS_ACCOUNT_ID"'
+      - 'echo "ECR URI: $ECR_URI"'
       - aws sts get-caller-identity
-
-      - echo "Logging in to Amazon ECR from CodeBuild"
-      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
+      - 'echo "Logging in to Amazon ECR from CodeBuild"'
+      - 'aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"'
 
   build:
     commands:
-      - echo "Building Spring Boot application"
-      - cd "$CODEBUILD_SRC_DIR"
-      - bash ./mvnw clean package -DskipTests
-
-      - echo "Checking generated JAR"
-      - ls -lh target/
-
-      - echo "Building Docker image inside AWS CodeBuild"
-      - docker build -t "$ECR_URI:$IMAGE_TAG" .
+      - 'echo "Building Spring Boot application"'
+      - 'cd "$CODEBUILD_SRC_DIR" && bash ./mvnw clean package -DskipTests'
+      - 'echo "Checking generated JAR"'
+      - 'ls -lh "$CODEBUILD_SRC_DIR/target/"'
+      - 'echo "Building Docker image inside AWS CodeBuild"'
+      - 'cd "$CODEBUILD_SRC_DIR" && docker build -t "$ECR_URI:$IMAGE_TAG" .'
 
   post_build:
     commands:
-      - echo "Pushing Docker image to ECR"
-      - docker push "$ECR_URI:$IMAGE_TAG"
-
-      - echo "Updating ECS service to use the new image"
-      - aws ecs update-service --cluster employee-api-cluster --service employee-api-service --desired-count 1 --force-new-deployment --region "$AWS_DEFAULT_REGION"
-
-      - echo "Build completed successfully"
+      - 'echo "Pushing Docker image to ECR"'
+      - 'docker push "$ECR_URI:$IMAGE_TAG"'
+      - 'echo "Updating ECS service to use the new image"'
+      - 'aws ecs update-service --cluster employee-api-cluster --service employee-api-service --desired-count 1 --force-new-deployment --region "$AWS_DEFAULT_REGION"'
+      - 'echo "Build completed successfully"'
+```
