@@ -20,7 +20,7 @@ phases:
   build:
     commands:
       - echo Building Spring Boot application
-      - cd "$CODEBUILD_SRC_DIR" && ./mvnw clean package -DskipTests
+      - cd "$CODEBUILD_SRC_DIR" && bash ./mvnw clean package -DskipTests
 
       - echo Building Docker image inside AWS CodeBuild
       - cd "$CODEBUILD_SRC_DIR" && docker build -t "$ECR_URI:$IMAGE_TAG" .
