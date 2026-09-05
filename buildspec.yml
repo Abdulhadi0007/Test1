@@ -10,29 +10,10 @@ phases:
     commands:
       - export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-${AWS_REGION:-}}"; test -n "$AWS_DEFAULT_REGION" || { echo "AWS_DEFAULT_REGION is not configured"; exit 1; }
       - export AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"; test -n "$AWS_ACCOUNT_ID" || { echo "Unable to determine AWS account ID"; exit 1; }
-      - export CDK_DEFAULT_ACCOUNT="$AWS_ACCOUNT_ID"; export CDK_DEFAULT_REGION="$AWS_DEFAULT_REGION"; export ECR_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME"
+      - export ECR_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME"
       - 'echo "AWS region: $AWS_DEFAULT_REGION"'
       - 'echo "AWS account: $AWS_ACCOUNT_ID"'
       - aws sts get-caller-identity
-      - cd "$CODEBUILD_SRC_DIR/infra"
-      - echo "Installing CDK infrastructure dependencies"
-      - npm ci
-      - echo "Validating CDK template"
-      - npx cdk synth EmployeeApiStack
-      - echo "Deploying infrastructure with zero tasks so ECR can receive the first image"
-      - |
-        set +e
-        npx cdk deploy EmployeeApiStack --require-approval never --verbose --parameters EmployeeApiStack:DesiredCount=0 --parameters EmployeeApiStack:ImageTag="$IMAGE_TAG"
-        deploy_status=$?
-        set -e
-        if [ "$deploy_status" -ne 0 ]; then
-          echo "CDK deployment failed with exit code $deploy_status"
-          echo "CloudFormation stack status:"
-          aws cloudformation describe-stacks --stack-name EmployeeApiStack --region "$AWS_DEFAULT_REGION" --query 'Stacks[0].[StackStatus,StackStatusReason]' --output table || true
-          echo "Recent CloudFormation events:"
-          aws cloudformation describe-stack-events --stack-name EmployeeApiStack --region "$AWS_DEFAULT_REGION" --query 'StackEvents[0:20].[Timestamp,ResourceStatus,ResourceType,LogicalResourceId,ResourceStatusReason]' --output table || true
-          exit "$deploy_status"
-        fi
       - 'echo "Logging in to Amazon ECR from CodeBuild"'
       - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
 
