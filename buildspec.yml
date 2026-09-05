@@ -1,4 +1,3 @@
-```yaml
 version: 0.2
 
 env:
@@ -44,4 +43,3 @@ phases:
       - 'echo "Updating ECS service to use the new image"'
       - 'aws ecs update-service --cluster employee-api-cluster --service employee-api-service --desired-count 1 --force-new-deployment --region "$AWS_DEFAULT_REGION"'
       - 'echo "Build completed successfully"'
-```
